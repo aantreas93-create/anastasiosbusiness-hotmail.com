@@ -1,0 +1,186 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-26
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Restore iOS support files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f ios/Podfile ]; then
+            flutter create --platforms=ios .
+          fi
+
+      - name: Resolve build version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_LINE=$(grep '^version:' pubspec.yaml | head -n 1 | tr -d ' ')
+          VERSION_VALUE=${VERSION_LINE#version:}
+          BUILD_NAME=${VERSION_VALUE%%+*}
+          CURRENT_BUILD=${VERSION_VALUE#*+}
+          if [ "$CURRENT_BUILD" = "$VERSION_VALUE" ]; then
+            CURRENT_BUILD=1
+          fi
+          RUN_BUILD=$((1000 + GITHUB_RUN_NUMBER))
+          if [ "$RUN_BUILD" -le "$CURRENT_BUILD" ]; then
+            BUILD_NUMBER=$((CURRENT_BUILD + 1))
+          else
+            BUILD_NUMBER=$RUN_BUILD
+          fi
+          echo "build_name=$BUILD_NAME" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Using build name $BUILD_NAME"
+          echo "Using build number $BUILD_NUMBER"
+
+      - name: Install Apple signing assets
+        env:
+          IOS_DISTRIBUTION_CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/dist-cert.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+
+          echo "$IOS_DISTRIBUTION_CERT_BASE64" | tr -d '\n\r ' | base64 -D -o "$CERT_PATH"
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | tr -d '\n\r ' | base64 -D -o "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$IOS_DISTRIBUTION_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter precache --ios
+          cd ios
+          pod install --repo-update
+
+      - name: Create export options
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_APP_BUNDLE_IDENTIFIER: ${{ secrets.IOS_APP_BUNDLE_IDENTIFIER }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${IOS_APP_BUNDLE_IDENTIFIER}</key>
+              <string>${IOS_PROVISIONING_PROFILE_NAME}</string>
+            </dict>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build ipa \
+            --release \
+            --build-name="${{ steps.version.outputs.build_name }}" \
+            --build-number="${{ steps.version.outputs.build_number }}" \
+            --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Generate artifact name
+        id: artifact
+        shell: bash
+        run: echo "name=app-release-ipa-$(date +'%Y-%m-%d_%H%M%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: build/ios/ipa/*.ipa
+          retention-days: 7
+
+      - name: Delete old IPA artifacts
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const keep = 3;
+            const artifacts = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const builds = artifacts.data.artifacts
+              .filter((artifact) => artifact.name.startsWith('app-release-ipa-'))
+              .sort((left, right) => new Date(right.created_at) - new Date(left.created_at));
+            const toDelete = builds.slice(keep);
+            for (const artifact of toDelete) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+            }
+
+      - name: Upload to App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/private_keys"
+          echo "$ASC_API_KEY_BASE64" | tr -d '\n\r ' | base64 -D -o "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          IPA_PATH=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "IPA not found"
+            exit 1
+          fi
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"

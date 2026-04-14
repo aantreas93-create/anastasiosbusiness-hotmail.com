@@ -1,0 +1,24 @@
+{
+  "functions": {
+    "source": "functions"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "cadeli-app",
+          "appId": "1:220210285911:android:baf6399578774969dd4212",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "cadeli-app",
+          "configurations": {
+            "android": "1:220210285911:android:baf6399578774969dd4212"
+          }
+        }
+      }
+    }
+  }
+}

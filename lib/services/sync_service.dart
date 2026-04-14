@@ -1,0 +1,47 @@
+// 🔧 lib/services/sync_service.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cadeli/models/product.dart';
+import 'package:cadeli/services/woocommerce_service.dart';
+
+class SyncService {
+  static Future<void> syncWooProductsToFirestore() async {
+    final firestore = FirebaseFirestore.instance;
+    final wooProducts = await WooCommerceService().fetchProducts();
+
+    final batch = firestore.batch();
+    final productsCollection = firestore.collection('products');
+
+    // 1. Clear existing Firestore products
+    final existingDocs = await productsCollection.get();
+    for (final doc in existingDocs.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // 2. Add WooCommerce products
+    final catMap = await WooCommerceService().fetchAllCategoriesMap();    // NEW
+    for (final productJson in wooProducts) {
+      final product = Product.fromWooJson(
+        productJson as Map<String, dynamic>,
+        catMap,
+      );                                                                  // CHANGED
+
+      final docRef = productsCollection.doc(product.id);
+      batch.set(docRef, {
+        'id': product.id,
+        'name': product.name,
+        'brand': product.brand,
+        'brandId': product.brandId,
+        'price': product.price,
+        'salePrice': product.salePrice,
+        'imageUrl': product.imageUrl,
+        'categoryIds': product.categoryIds,
+        'isFeatured': product.isFeatured,
+      });
+    }
+
+
+    await batch.commit();
+    print('✅ Synced WooCommerce products to Firestore.');
+  }
+}

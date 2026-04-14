@@ -1,0 +1,105 @@
+name: cadeli
+description: "The Cadeli App"
+publish_to: 'none'
+
+version: 1.0.0+5
+
+environment:
+  sdk: '>=3.4.4 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^4.2.1
+  firebase_analytics: ^12.0.4
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  cloud_functions: ^6.0.4
+  firebase_messaging: ^16.0.4
+
+  # State & Utils
+  provider: ^6.1.1
+  collection: ^1.18.0
+  shared_preferences: ^2.2.2
+  http: ^1.2.2
+  connectivity_plus: ^5.0.2
+  timezone: ^0.9.2
+  intl: ^0.18.0
+
+  # UI
+  google_fonts: ^4.0.4
+  font_awesome_flutter: ^9.2.0
+  flutter_inset_shadow: ^2.0.3
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.0
+  lottie: ^2.7.0
+  cupertino_icons: ^1.0.2
+
+  # Google Maps & Location
+  google_sign_in: ^6.2.1
+  google_maps_flutter: ^2.5.3
+  geolocator: ^9.0.2
+  geocoding: ^2.0.5
+
+  # Auth Buttons
+  flutter_signin_button: ^2.0.0
+
+  # WebView / URL
+  url_launcher: ^6.3.0
+  webview_flutter: ^4.5.0
+  webview_flutter_web: ^0.2.2+1
+
+  # Payments
+  flutter_stripe: ^9.6.0
+
+  # Notifications
+  flutter_local_notifications: ^17.1.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/background/bottle_back.jpg
+    - assets/background/clear_back.jpg
+    - assets/background/clearflow_back.jpg
+    - assets/background/coral_back.jpg
+    - assets/products/bottle1.jpg
+    - assets/products/iteo6.jpg
+    - assets/products/keaos1.jpg
+    - assets/products/keo1.jpg
+    - assets/products/sn6.jpg
+    - assets/coral_vid.mp4
+    - assets/background/start_background.jpg
+    - assets/background/startpic.jpg
+    - assets/background/startcadeli.jpg
+    - assets/background/cadeli_old_start.jpg
+    - assets/background/fade_base.jpg
+    - assets/cadeli.logo.jpg
+    - assets/index/index1.jpg
+    - assets/index/index2.jpg
+    - assets/index/index3.jpg
+    - assets/index/index4.jpg
+    - assets/icons/google_icon.png
+    - assets/icons/mastercard.png
+    - assets/icons/paypal.png
+    - assets/icons/visa.png
+    - assets/icons/chat_icon.png
+    - assets/icons/home_icon.png
+    - assets/icons/profile_icon.png
+    - assets/icons/product_icon.png
+    - assets/icons/admin_icon.png
+    - assets/icons/truck.png
+    - assets/index/cadeli-drive.png
+    - assets/index/cadeli-time.png
+    - assets/index/cadeli-subscribe.png
+    - assets/index/cadeli-deliver.png
+    - assets/index/cadeli-account.png
+    - assets/index/cadeli-autosubscribe.png
+    - assets/index/cadeli-drive-cut.jpg
