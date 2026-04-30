@@ -7,6 +7,10 @@ permissions:
   actions: write
   contents: read
 
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
 jobs:
   build-ios:
     runs-on: macos-26
@@ -16,10 +20,53 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Verify required secrets
+        env:
+          IOS_DISTRIBUTION_CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          IOS_APP_BUNDLE_IDENTIFIER: ${{ secrets.IOS_APP_BUNDLE_IDENTIFIER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          MISSING=0
+          check_var() {
+            local name=$1
+            local value=${!name:-}
+            if [ -z "$value" ]; then
+              echo "MISSING: $name"
+              MISSING=$((MISSING + 1))
+            else
+              echo "SET:     $name (${#value} chars)"
+            fi
+          }
+          check_var IOS_DISTRIBUTION_CERT_BASE64
+          check_var IOS_DISTRIBUTION_CERT_PASSWORD
+          check_var IOS_PROVISIONING_PROFILE_BASE64
+          check_var IOS_PROVISIONING_PROFILE_NAME
+          check_var IOS_APP_BUNDLE_IDENTIFIER
+          check_var APPLE_TEAM_ID
+          check_var KEYCHAIN_PASSWORD
+          check_var ASC_KEY_ID
+          check_var ASC_ISSUER_ID
+          check_var ASC_API_KEY_BASE64
+          if [ $MISSING -gt 0 ]; then
+            echo "::error::$MISSING required secrets are missing. Configure them in repository settings."
+            exit 1
+          fi
+          echo "All required secrets are present."
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Restore iOS support files
         shell: bash
@@ -77,6 +124,24 @@ jobs:
 
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+
+      - name: Cache Pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            pods-${{ runner.os }}-
 
       - name: Install dependencies
         shell: bash
@@ -137,6 +202,7 @@ jobs:
         run: echo "name=app-release-ipa-$(date +'%Y-%m-%d_%H%M%S')" >> "$GITHUB_OUTPUT"
 
       - name: Upload IPA artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.artifact.outputs.name }}
@@ -174,13 +240,41 @@ jobs:
           set -euo pipefail
           mkdir -p "$HOME/private_keys"
           echo "$ASC_API_KEY_BASE64" | tr -d '\n\r ' | base64 -D -o "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
           IPA_PATH=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' | head -n 1)
           if [ -z "$IPA_PATH" ]; then
-            echo "IPA not found"
+            echo "::error::IPA not found in build/ios/ipa"
             exit 1
           fi
-          xcrun altool --upload-app \
-            --type ios \
-            --file "$IPA_PATH" \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+          echo "IPA path: $IPA_PATH"
+          echo "IPA size: $(du -h "$IPA_PATH" | cut -f1)"
+
+          MAX_ATTEMPTS=3
+          ATTEMPT=1
+          UPLOAD_SUCCESS=false
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Upload attempt $ATTEMPT of $MAX_ATTEMPTS..."
+            if xcrun altool --upload-app \
+              --type ios \
+              --file "$IPA_PATH" \
+              --apiKey "$ASC_KEY_ID" \
+              --apiIssuer "$ASC_ISSUER_ID"; then
+              UPLOAD_SUCCESS=true
+              break
+            else
+              echo "::warning::Upload attempt $ATTEMPT failed."
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                WAIT=$((ATTEMPT * 30))
+                echo "Retrying in ${WAIT}s..."
+                sleep $WAIT
+              fi
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          if [ "$UPLOAD_SUCCESS" = true ]; then
+            echo "IPA uploaded to App Store Connect successfully."
+          else
+            echo "::error::Upload to App Store Connect failed after $MAX_ATTEMPTS attempts. The IPA artifact is still available for manual upload via Transporter."
+            exit 1
+          fi
