@@ -33,7 +33,6 @@ void main() async {
   Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
   if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
   await Stripe.instance.applySettings();
-  git status
   runApp(const MyApp());
 }
 
