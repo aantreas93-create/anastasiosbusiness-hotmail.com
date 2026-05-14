@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -6,7 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'firebase_options.dart';
 import 'models/cart_provider.dart';
-// import 'services/notification_service.dart'; // temporarily disabled with NotificationService.initialize()
+import 'services/notification_service.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 // Screens
 import 'screens/start_page.dart';          // splash visual
@@ -25,18 +27,18 @@ void main() async {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     }
   } catch (_) {}
-  // NotificationService.initialize() temporarily disabled to isolate iOS startup hang.
-  // Push notifications will not work until re-enabled.
-  // await NotificationService.initialize();
+  await NotificationService.initialize();
 
-  // Stripe — temporarily disabled on all platforms while isolating an iOS startup hang.
-  // Web: Stripe SDK uses dart:io (Platform.isIOS) which is not available on web.
-  // iOS: assigning publishableKey triggers markNeedsSettings -> native PassKit init,
-  //      which appears to hang without proper Apple Pay entitlements.
-  // Re-enable for the platforms where it's needed once Apple Pay merchant config is in place.
-  // Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
-  // if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
-  // await Stripe.instance.applySettings();
+  // Stripe — base config only. Apple Pay merchant identifier and applySettings remain
+  // disabled until the Merchant ID is registered in Apple Developer portal and added to
+  // the App ID capabilities + provisioning profile entitlements.
+  // Skipped on web because flutter_stripe uses dart:io (Platform.isIOS) which is not
+  // available on web — only relevant for `flutter run -d chrome` debugging.
+  if (!kIsWeb) {
+    Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
+    // if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
+    // await Stripe.instance.applySettings();
+  }
   runApp(const MyApp());
 }
 
