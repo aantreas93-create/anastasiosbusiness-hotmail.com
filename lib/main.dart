@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'firebase_options.dart';
@@ -22,23 +24,33 @@ import 'screens/admin_main_page.dart';
 import 'screens/pick_location_page.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  try {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    }
-  } catch (_) {}
-  await NotificationService.initialize();
+  // runZonedGuarded captures async errors that escape the Flutter framework and
+  // forwards them to Crashlytics. FlutterError.onError handles framework errors.
+  runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      }
+    } catch (_) {}
 
-  // Stripe — full config including Apple Pay. Skipped on web because flutter_stripe
-  // uses dart:io (Platform.isIOS) which is not available on web — only relevant for
-  // `flutter run -d chrome` debugging.
-  if (!kIsWeb) {
-    Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
-    if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
-    await Stripe.instance.applySettings();
-  }
-  runApp(const MyApp());
+    // Crashlytics — record any error the Flutter framework surfaces.
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+    await NotificationService.initialize();
+
+    // Stripe — full config including Apple Pay. Skipped on web because flutter_stripe
+    // uses dart:io (Platform.isIOS) which is not available on web — only relevant for
+    // `flutter run -d chrome` debugging.
+    if (!kIsWeb) {
+      Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
+      if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
+      await Stripe.instance.applySettings();
+    }
+    runApp(const MyApp());
+  }, (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  });
 }
 
 class MyApp extends StatelessWidget {

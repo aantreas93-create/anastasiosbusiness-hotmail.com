@@ -18,6 +18,7 @@ dependencies:
   cloud_firestore: ^6.1.0
   cloud_functions: ^6.0.4
   firebase_messaging: ^16.0.4
+  firebase_crashlytics: ^5.0.0
 
   # State & Utils
   provider: ^6.1.1
