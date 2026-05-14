@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -29,10 +29,12 @@ void main() async {
   } catch (_) {}
   await NotificationService.initialize();
 
-  // Stripe
-  Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
-  if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
-  await Stripe.instance.applySettings();
+  // Stripe (skip entirely on web — Stripe Flutter SDK uses dart:io which isn't available there)
+  if (!kIsWeb) {
+    Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
+    // if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
+    // await Stripe.instance.applySettings();
+  }
   runApp(const MyApp());
 }
 

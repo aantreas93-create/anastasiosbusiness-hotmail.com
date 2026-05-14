@@ -26,6 +26,10 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Cadeli uses the camera to scan payment cards and capture order-related photos.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Cadeli uses your location to find nearby stores, calculate delivery distances, and provide order tracking.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Cadeli uses your location to find nearby stores, calculate delivery distances, and set your delivery address.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
