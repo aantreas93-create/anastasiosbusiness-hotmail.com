@@ -196,6 +196,29 @@ jobs:
             --build-number="${{ steps.version.outputs.build_number }}" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
 
+      - name: Upload dSYMs to Firebase Crashlytics
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPLOAD_SCRIPT="ios/Pods/FirebaseCrashlytics/upload-symbols"
+          GSP="ios/Runner/GoogleService-Info.plist"
+          DSYM_DIR="build/ios/archive/Runner.xcarchive/dSYMs"
+          if [ ! -x "$UPLOAD_SCRIPT" ]; then
+            echo "::warning::FirebaseCrashlytics upload-symbols script not found at $UPLOAD_SCRIPT — skipping dSYM upload."
+            exit 0
+          fi
+          if [ ! -f "$GSP" ]; then
+            echo "::warning::GoogleService-Info.plist not found at $GSP — skipping dSYM upload."
+            exit 0
+          fi
+          if [ ! -d "$DSYM_DIR" ]; then
+            echo "::warning::dSYM directory not found at $DSYM_DIR — skipping dSYM upload."
+            exit 0
+          fi
+          echo "Uploading dSYMs from $DSYM_DIR to Firebase Crashlytics..."
+          "$UPLOAD_SCRIPT" -gsp "$GSP" -p ios "$DSYM_DIR"
+
       - name: Generate artifact name
         id: artifact
         shell: bash
