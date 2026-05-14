@@ -20,13 +20,17 @@ class NotificationService {
   );
 
   static Future<void> initialize() async {
-    // Request permissions
+    // Request permissions (firebase_messaging — this is what triggers the iOS
+    // "Allow Notifications?" system dialog and obtains the APNs token).
     await _requestPermissions();
 
-    // Initialize local notifications
-    await _initializeLocalNotifications();
+    // Local notifications init disabled: flutter_local_notifications was hanging
+    // iOS startup even with requestXPermission flags set to false. We keep Firebase
+    // Cloud Messaging only. Remote FCM pushes still arrive; in-app generated local
+    // notifications won't render until this is re-enabled.
+    // await _initializeLocalNotifications();
 
-    // Configure FCM
+    // Configure FCM (token + listeners)
     await _configureFCM();
 
     // Handle background messages

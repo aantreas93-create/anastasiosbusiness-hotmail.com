@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,15 +30,13 @@ void main() async {
   } catch (_) {}
   await NotificationService.initialize();
 
-  // Stripe — base config only. Apple Pay merchant identifier and applySettings remain
-  // disabled until the Merchant ID is registered in Apple Developer portal and added to
-  // the App ID capabilities + provisioning profile entitlements.
-  // Skipped on web because flutter_stripe uses dart:io (Platform.isIOS) which is not
-  // available on web — only relevant for `flutter run -d chrome` debugging.
+  // Stripe — full config including Apple Pay. Skipped on web because flutter_stripe
+  // uses dart:io (Platform.isIOS) which is not available on web — only relevant for
+  // `flutter run -d chrome` debugging.
   if (!kIsWeb) {
     Stripe.publishableKey = 'pk_test_51S6UmbI3V93NylQgC8WsOktl7aErCo55vNa9LIV95sCnwvCHoCD2PV1LBLjcUp0wQeJ4wvUJ5h0aZJUnZVVbPef4003m4GIw6g';
-    // if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
-    // await Stripe.instance.applySettings();
+    if (Platform.isIOS) Stripe.merchantIdentifier = 'merchant.com.cadeli';
+    await Stripe.instance.applySettings();
   }
   runApp(const MyApp());
 }
