@@ -50,13 +50,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDz2CJcBVeMbAyX1tLmfEBj_Y2QEJmDXV8',
-    appId: '1:220210285911:ios:aa993b417c8bbc66dd4212',
+    appId: '1:220210285911:ios:d525d1c977d78f8ddd4212',
     messagingSenderId: '220210285911',
     projectId: 'cadeli-app',
     storageBucket: 'cadeli-app.firebasestorage.app',
     androidClientId: '220210285911-0qidcl3rcopqf728ve7la0umuupn46fc.apps.googleusercontent.com',
-    iosClientId: '220210285911-l3tort5eht9jed4gjguuk5qghkphqojc.apps.googleusercontent.com',
-    iosBundleId: 'com.example.cadeliNew',
+    iosClientId: '220210285911-31af5jjv39qv6p9f745j1rnci70md9rf.apps.googleusercontent.com',
+    iosBundleId: 'com.cadeli.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
@@ -71,13 +71,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDz2CJcBVeMbAyX1tLmfEBj_Y2QEJmDXV8',
-    appId: '1:220210285911:ios:aa993b417c8bbc66dd4212',
+    appId: '1:220210285911:ios:d525d1c977d78f8ddd4212',
     messagingSenderId: '220210285911',
     projectId: 'cadeli-app',
     storageBucket: 'cadeli-app.firebasestorage.app',
     androidClientId: '220210285911-0qidcl3rcopqf728ve7la0umuupn46fc.apps.googleusercontent.com',
-    iosClientId: '220210285911-l3tort5eht9jed4gjguuk5qghkphqojc.apps.googleusercontent.com',
-    iosBundleId: 'com.example.cadeliNew',
+    iosClientId: '220210285911-31af5jjv39qv6p9f745j1rnci70md9rf.apps.googleusercontent.com',
+    iosBundleId: 'com.cadeli.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
