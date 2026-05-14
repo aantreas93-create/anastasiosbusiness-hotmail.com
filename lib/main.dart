@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'firebase_options.dart';
 import 'models/cart_provider.dart';
-import 'services/notification_service.dart';
+// import 'services/notification_service.dart'; // temporarily disabled with NotificationService.initialize()
 
 // Screens
 import 'screens/start_page.dart';          // splash visual
@@ -25,7 +25,9 @@ void main() async {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     }
   } catch (_) {}
-  await NotificationService.initialize();
+  // NotificationService.initialize() temporarily disabled to isolate iOS startup hang.
+  // Push notifications will not work until re-enabled.
+  // await NotificationService.initialize();
 
   // Stripe — temporarily disabled on all platforms while isolating an iOS startup hang.
   // Web: Stripe SDK uses dart:io (Platform.isIOS) which is not available on web.
