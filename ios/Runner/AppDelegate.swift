@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import UserNotifications
+import GoogleMaps
 
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
@@ -8,6 +9,7 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    GMSServices.provideAPIKey("AIzaSyActfu4OrdOJA7bxz52meaCrnce0INcLsw")
     // Register for notifications natively before Flutter starts.
     // Shows the iOS "Allow Notifications?" dialog during native launch instead of
     // depending on Flutter plugin code to do it later (which was hanging startup).
